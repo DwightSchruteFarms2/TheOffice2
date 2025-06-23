@@ -32,7 +32,6 @@ jobs:
       - checkout
       - python/install-packages:
           pkg-manager: pip
-          requirements-file: ./requirements.txt
       - run:
           command: python main.py
           name: Run Python script
