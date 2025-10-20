@@ -1,46 +1,40 @@
-name: Install Amazon Q CLI
+name: Install Q CLI with IAM Identity Center Login
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-  install-and-test:
+  install-and-run-q:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write # Required for assuming a role via OIDC
+      contents: read
+    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies for Q CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl unzip libfuse2
+      - name: Configure AWS Credentials from OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: us-east-1 # Replace with your IAM Identity Center region
+          role-session-name: github-action-q-cli
+      
+      - name: Install dependencies (curl, unzip)
+        run: sudo apt-get update && sudo apt-get install -y curl unzip
 
-      - name: Download and install Q CLI
+      - name: Download and install Amazon Q CLI
         run: |
-          # Download the latest 64-bit Linux zip file
           curl --proto '=https' --tlsv1.2 -sSf "https://desktop-release.q.us-east-1.amazonaws.com/latest/q-x86_64-linux.zip" -o "q.zip"
-          
-          # Unzip the downloaded file
           unzip q.zip
-          
-          # Run the installer with --no-confirm to automate the process
           ./q/install.sh --no-confirm
-          
-          # Add the installation directory to the PATH for the rest of the job
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-        
+      
       - name: Verify Q CLI installation
-        run: q version
+        run: q --version
 
-      - name: Example of using the Q CLI
-        # Note: You must run `q login` on your machine and persist the credentials 
-        # to a secrets store (like S3) for CI/CD authentication.
-        # The following command will fail without authentication.
-        run: q chat "Hello from GitHub Actions!"
-        continue-on-error: true # Allow this step to fail if not authenticated
+      - name: Run authenticated Q CLI command (example)
+        # The --no-interactive and --trust-all-tools flags are necessary for CI/CD
+        run: q chat --no-interactive --trust-all-tools "What is the AWS CLI?"
