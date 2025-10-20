@@ -1,0 +1,46 @@
+name: Install Amazon Q CLI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  install-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies for Q CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip libfuse2
+
+      - name: Download and install Q CLI
+        run: |
+          # Download the latest 64-bit Linux zip file
+          curl --proto '=https' --tlsv1.2 -sSf "https://desktop-release.q.us-east-1.amazonaws.com/latest/q-x86_64-linux.zip" -o "q.zip"
+          
+          # Unzip the downloaded file
+          unzip q.zip
+          
+          # Run the installer with --no-confirm to automate the process
+          ./q/install.sh --no-confirm
+          
+          # Add the installation directory to the PATH for the rest of the job
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        
+      - name: Verify Q CLI installation
+        run: q version
+
+      - name: Example of using the Q CLI
+        # Note: You must run `q login` on your machine and persist the credentials 
+        # to a secrets store (like S3) for CI/CD authentication.
+        # The following command will fail without authentication.
+        run: q chat "Hello from GitHub Actions!"
+        continue-on-error: true # Allow this step to fail if not authenticated
