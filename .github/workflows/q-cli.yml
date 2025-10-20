@@ -1,40 +1,38 @@
-name: Install Q CLI with IAM Identity Center Login
+name: Install Q CLI on Ubuntu
 
 on:
+  # This workflow will run on push events to any branch
   push:
     branches: ["main"]
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  install-and-run-q:
+  install-q-cli:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for assuming a role via OIDC
-      contents: read
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials from OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-          aws-region: us-east-1 # Replace with your IAM Identity Center region
-          role-session-name: github-action-q-cli
-      
       - name: Install dependencies (curl, unzip)
         run: sudo apt-get update && sudo apt-get install -y curl unzip
 
-      - name: Download and install Amazon Q CLI
+      - name: Download Amazon Q CLI installer
         run: |
           curl --proto '=https' --tlsv1.2 -sSf "https://desktop-release.q.us-east-1.amazonaws.com/latest/q-x86_64-linux.zip" -o "q.zip"
-          unzip q.zip
-          ./q/install.sh --no-confirm
-      
+
+      - name: Unzip installer
+        run: unzip q.zip
+
+      - name: Run Q CLI installer
+        # The --no-confirm flag is essential for non-interactive environments like a GitHub Action
+        run: ./q/install.sh --no-confirm
+
       - name: Verify Q CLI installation
         run: q --version
 
-      - name: Run authenticated Q CLI command (example)
-        # The --no-interactive and --trust-all-tools flags are necessary for CI/CD
-        run: q chat --no-interactive --trust-all-tools "What is the AWS CLI?"
+      - name: Use Q CLI (example)
+        # This step is for demonstration. It will likely fail without authentication.
+        # Replace with your specific Q CLI commands.
+        run: q chat "Hello from GitHub Actions"
